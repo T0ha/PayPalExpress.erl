@@ -1,5 +1,5 @@
-{application, 'esocial',
- [{description, "An OTP application"},
+{application, 'paypal',
+ [{description, "PayPal Express REST wrapper"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, {'esocial_app', []}},
@@ -8,7 +8,6 @@
     stdlib,
     ssl,
     inets,
-    hottub,
     hackney,
     lager
    ]},

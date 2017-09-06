@@ -6,11 +6,11 @@
 %%% @end
 %%% Created : 2016-08-30 15:22:18.651553
 %%%-------------------------------------------------------------------
--module(esocial).
+-module(paypal).
 
 -behaviour(gen_server).
 
--include("include/esocial.hrl").
+-include("include/paypal.hrl").
 
 
 %% API
@@ -80,47 +80,47 @@ auth(Platform, Code, RedirectURI) ->
 
 -spec captcha(handler(), Captcha) -> handler() when % {{{1
       Captcha :: any().
-captcha(#esocial{module=Module, user_id=Id, token=Token}=Handler, Captcha) ->
+captcha(#paypal{module=Module, user_id=Id, token=Token}=Handler, Captcha) ->
     Module:captcha(Handler, Captcha).
 
 -spec profile(handler()) -> profile(). % {{{1
-profile(#esocial{module=Module, user_id=Id, token=Token}=Handler) ->
+profile(#paypal{module=Module, user_id=Id, token=Token}=Handler) ->
     Module:profile(Handler, Id).
 
--spec profile(handler(), esocial_id()) -> profile(). % {{{1
-profile(#esocial{module=Module, token=Token}=Handler, Id) ->
+-spec profile(handler(), paypal_id()) -> profile(). % {{{1
+profile(#paypal{module=Module, token=Token}=Handler, Id) ->
     Module:profile(Handler, Id).
 
--spec profiles(handler(), [esocial_id()]) -> [profile()]. % {{{1
-profiles(#esocial{module=Module, token=Token}=Handler, IDs) ->
+-spec profiles(handler(), [paypal_id()]) -> [profile()]. % {{{1
+profiles(#paypal{module=Module, token=Token}=Handler, IDs) ->
     Module:profiles(Handler, IDs).
 
 -spec playlists(handler()) -> [playlist()]. % {{{1
-playlists(#esocial{module=Module, token=Token, user_id=UID}=Handler) ->
+playlists(#paypal{module=Module, token=Token, user_id=UID}=Handler) ->
     Module:playlists(Handler, UID).
 
--spec playlists(handler(), [esocial_id()]) -> [playlist()]. % {{{1
-playlists(#esocial{module=Module, token=Token}=Handler, IDs) ->
+-spec playlists(handler(), [paypal_id()]) -> [playlist()]. % {{{1
+playlists(#paypal{module=Module, token=Token}=Handler, IDs) ->
     Module:playlists(Handler, IDs).
 
--spec playlist(handler(), esocial_id()) -> playlist(). % {{{1
-playlist(#esocial{module=Module, token=Token}=Handler, Id) ->
+-spec playlist(handler(), paypal_id()) -> playlist(). % {{{1
+playlist(#paypal{module=Module, token=Token}=Handler, Id) ->
     Module:playlist(Handler, Id).
 
--spec track(handler(), esocial_id()) -> track(). % {{{1
-track(#esocial{module=Module, token=Token}=Handler, Id) ->
+-spec track(handler(), paypal_id()) -> track(). % {{{1
+track(#paypal{module=Module, token=Token}=Handler, Id) ->
     Module:track(Handler, Id).
 
--spec tracks(handler(), [esocial_id()]) -> [track()]. % {{{1
-tracks(#esocial{module=Module, token=Token}=Handler, Ids) ->
+-spec tracks(handler(), [paypal_id()]) -> [track()]. % {{{1
+tracks(#paypal{module=Module, token=Token}=Handler, Ids) ->
     Module:tracks(Handler, Ids).
 
--spec user_tracks(handler(), esocial_id()) -> [track()]. % {{{1
-user_tracks(#esocial{module=Module, token=Token}=Handler, Id) ->
+-spec user_tracks(handler(), paypal_id()) -> [track()]. % {{{1
+user_tracks(#paypal{module=Module, token=Token}=Handler, Id) ->
     Module:user_tracks(Handler, Id).
 
 -spec user_tracks(handler()) -> [track()]. % {{{1
-user_tracks(#esocial{module=Module, user_id=Id, token=Token}=Handler) ->
+user_tracks(#paypal{module=Module, user_id=Id, token=Token}=Handler) ->
     Module:user_tracks(Handler, Id).
 
 %%%===================================================================
@@ -214,5 +214,5 @@ code_change(_OldVsn, State, _Extra) -> % {{{1
 %%% Internal functions
 %%%===================================================================
 platform_to_module(M) -> % {{{1
-    list_to_atom("esocial_" ++ atom_to_list(M)).
+    list_to_atom("paypal_" ++ atom_to_list(M)).
 

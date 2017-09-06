@@ -1,4 +1,4 @@
--module(esocial_request).
+-module(paypal_request).
 
 -behaviour(gen_server).
 
@@ -27,7 +27,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link() ->  % {{{2
-    Workers = application:get_env(esocial, request_workers, 10),
+    Workers = application:get_env(paypal, request_workers, 10),
     hottub:start_link(request, Workers, gen_server, start_link, [?MODULE, [], []]).
 
 %%%===================================================================

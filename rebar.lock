@@ -1,6 +1,6 @@
 [{<<"goldrush">>,
-  {git,"git://github.com/DeadZen/goldrush.git",
-       {ref,"64864ba7fcf40988361340e48680b49a2c2938cf"}},
+  {git,"https://github.com/basho/goldrush.git",
+       {ref,"8f1b715d36b650ec1e1f5612c00e28af6ab0de82"}},
   1},
  {<<"hackney">>,
   {git,"git://github.com/benoitc/hackney.git",
@@ -17,6 +17,6 @@
   0},
  {<<"lager">>,
   {git,"git://github.com/basho/lager.git",
-       {ref,"cbf6679c6a693772fd1629c9cdc093e4c6c4ebf8"}},
+       {ref,"81eaef0ce98fdbf64ab95665e3bc2ec4b24c7dac"}},
   0},
  {<<"ssl_verify_hostname">>,{pkg,<<"ssl_verify_hostname">>,<<"1.0.5">>},1}].

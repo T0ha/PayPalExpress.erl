@@ -1,8 +1,8 @@
--module(esocial_vk).
+-module(paypal_payments).
 
 -behaviour(gen_server).
 
--include("include/esocial.hrl").
+-include("include/paypal.hrl").
 %% API functions
 -export([
          start_link/1,
@@ -65,7 +65,7 @@ auth(Code, RedirectURI) ->
         #{<<"user_id">> := UID,
           <<"access_token">> := Token} ->
             {ok, 
-            #esocial{
+            #paypal{
                module=?MODULE,
                platform=vk,
                user_id=UID,
@@ -78,21 +78,21 @@ auth(Code, RedirectURI) ->
       Captcha :: {Sid, CaptchaData},
       Sid :: binary(),
       CaptchaData :: binary().
-captcha(#esocial{args=OldArgs}=Handler, {Sid, Captcha}) ->
+captcha(#paypal{args=OldArgs}=Handler, {Sid, Captcha}) ->
     ClearArgs = proplists:delete(captcha_sid, proplists:delete(captcha_img, OldArgs)),
     Args = ClearArgs ++ [{captcha_sid, Sid},
                          {captcha_key, Captcha}],
-    Handler#esocial{args=Args}.
+    Handler#paypal{args=Args}.
 
--spec profile(handler(), esocial_id()) -> profile(). % {{{1
+-spec profile(handler(), paypal_id()) -> profile(). % {{{1
 profile(Handler, Id) ->
     case profiles(Handler, [Id]) of
-        [#esocial_profile{}=P] -> P;
+        [#paypal_profile{}=P] -> P;
         Any -> Any
     end.
 
--spec profiles(handler(), [esocial_id()]) -> [profile()]. % {{{1
-profiles(#esocial{args=ArgsCommon, token=Token}=Handler, IDs) ->
+-spec profiles(handler(), [paypal_id()]) -> [profile()]. % {{{1
+profiles(#paypal{args=ArgsCommon, token=Token}=Handler, IDs) ->
     Method = "users.get",
     BinIDs = string:join([integer_to_list(ID) || ID <- IDs], ","),
     Args = ArgsCommon ++ [
@@ -112,7 +112,7 @@ profiles(#esocial{args=ArgsCommon, token=Token}=Handler, IDs) ->
                         <<"photo_50">> := Photo
                        } = Profile) ->
                               URL = <<"https://vk.com/id", (integer_to_binary(PID))/bytes>>,
-                              #esocial_profile{
+                              #paypal_profile{
                                  id = PID,
                                  display_name = <<Name/bytes, " ", Surname/bytes>>,
                                  birthdate  = maps:get(<<"bdate">>, Profile, <<>>),
@@ -125,8 +125,8 @@ profiles(#esocial{args=ArgsCommon, token=Token}=Handler, IDs) ->
         Any -> Any
     end.
 
--spec playlists(handler(), esocial_id()) -> [playlist()]. % {{{1
-playlists(#esocial{args=ArgsCommon, token=Token}=Handler, Id) ->
+-spec playlists(handler(), paypal_id()) -> [playlist()]. % {{{1
+playlists(#paypal{args=ArgsCommon, token=Token}=Handler, Id) ->
     Method = "audio.getAlbums",
     Args = ArgsCommon ++ [{owner_id, integer_to_binary(Id)},
                           {access_token, Token}
@@ -140,8 +140,8 @@ playlists(#esocial{args=ArgsCommon, token=Token}=Handler, Id) ->
         Any -> Any
     end.
 
--spec track(handler(), esocial_id()) -> track(). % {{{1
-track(#esocial{args=ArgsCommon, token=Token}=Handler, Id) ->
+-spec track(handler(), paypal_id()) -> track(). % {{{1
+track(#paypal{args=ArgsCommon, token=Token}=Handler, Id) ->
     Method = "audio.get",
     Args = ArgsCommon ++ [
                           {audio_ids, [integer_to_binary(Id)]},
@@ -153,8 +153,8 @@ track(#esocial{args=ArgsCommon, token=Token}=Handler, Id) ->
         Any -> Any
     end.
 
--spec tracks(handler(), [esocial_id()]) -> [track()]. % {{{1
-tracks(#esocial{args=ArgsCommon, token=Token}=Handler, IDs) ->
+-spec tracks(handler(), [paypal_id()]) -> [track()]. % {{{1
+tracks(#paypal{args=ArgsCommon, token=Token}=Handler, IDs) ->
     Method = "audio.get",
     BinIDs = string:join([integer_to_list(ID) || ID <- IDs], ","),
 
@@ -167,8 +167,8 @@ tracks(#esocial{args=ArgsCommon, token=Token}=Handler, IDs) ->
         Any -> Any
     end.
 
--spec playlist_tracks(handler(), esocial_id()) -> [track()]. % {{{1
-playlist_tracks(#esocial{args=ArgsCommon, token=Token}=Handler, PlaylistID) ->
+-spec playlist_tracks(handler(), paypal_id()) -> [track()]. % {{{1
+playlist_tracks(#paypal{args=ArgsCommon, token=Token}=Handler, PlaylistID) ->
     Method = "audio.get",
     Args = ArgsCommon ++ [
             {album_id, integer_to_binary(PlaylistID)},
@@ -180,8 +180,8 @@ playlist_tracks(#esocial{args=ArgsCommon, token=Token}=Handler, PlaylistID) ->
         Any -> Any
     end.
 
--spec user_tracks(handler(), esocial_id()) -> [track()]. % {{{1
-user_tracks(#esocial{args=ArgsCommon, token=Token}=Handler, OwnerID) ->
+-spec user_tracks(handler(), paypal_id()) -> [track()]. % {{{1
+user_tracks(#paypal{args=ArgsCommon, token=Token}=Handler, OwnerID) ->
     Method = "audio.get",
     Args = ArgsCommon ++ [
                           {owner_id, integer_to_binary(OwnerID)},
@@ -343,7 +343,7 @@ decode_audio(#{<<"aid">> := AID, % {{{1
                <<"duration">> :=Duration,
                <<"url">> := URL
               }) ->
-    #esocial_track{
+    #paypal_track{
        id = AID,
        name = Title,
        artist = Artist,
@@ -356,8 +356,8 @@ decode_playlist(#{<<"album_id">> := AID, % {{{1
                  },
                 Handler) ->
     Tracks = playlist_tracks(Handler, AID),
-    #esocial_playlist{
+    #paypal_playlist{
        id = AID,
        name = Title, 
-       tracks = [TID || #esocial_track{id=TID} <- Tracks]
+       tracks = [TID || #paypal_track{id=TID} <- Tracks]
       }.

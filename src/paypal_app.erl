@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc esocial public API
+%% @doc paypal public API
 %% @end
 %%%-------------------------------------------------------------------
 
--module('esocial_app').
+-module('paypal_app').
 
 -behaviour(application).
 
@@ -16,7 +16,7 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-    'esocial_sup':start_link().
+    'paypal_sup':start_link().
 
 %%--------------------------------------------------------------------
 stop(_State) ->
