@@ -30,10 +30,9 @@ start_link() ->
 
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 init([]) ->
-    Plugins = application:get_env(paypal, plugins, []),
-    Children = lists:map(fun start_plugin/1, Plugins),
-    Request = ?CHILD(paypal_request, paypal_request, []),
-    {ok, { {one_for_all, 0, 1}, [Request | Children]} }.
+    Config = application:get_env(paypal, account, []),
+    Request = ?CHILD(paypal_request, paypal_request, [Config]),
+    {ok, { {one_for_all, 0, 1}, [Request]} }.
 
 %%====================================================================
 %% Internal functions

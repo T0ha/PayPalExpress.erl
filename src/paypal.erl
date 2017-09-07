@@ -15,20 +15,7 @@
 
 %% API
 -export([
-         start_link/0,
-         connect/2,
-         connect/3,
-         auth/3,
-         captcha/2,
-         profile/1,
-         profile/2,
-         profiles/2,
-         playlists/1,
-         playlists/2,
-         track/2,
-         tracks/2,
-         user_tracks/2,
-         user_tracks/1
+         start_link/0
         ]).
 
 %% gen_server callbacks
@@ -57,87 +44,6 @@
 start_link() -> % {{{1
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
--spec connect(platform(), binary()) -> binary(). % {{{1
-connect(Platform, RedirectURI) ->
-    Module = platform_to_module(Platform),
-    Module:connect(RedirectURI, ["*"]).
-
--spec connect(platform(), binary(), Scopes) -> binary() when % {{{1
-      Scopes :: [Scope],
-      Scope :: iodata().
-connect(Platform, RedirectURI, Scopes) ->
-    Module = platform_to_module(Platform),
-    Module:connect(RedirectURI, Scopes).
-
--spec auth(Platform, Code, RedirectURI) -> handler() when % {{{1
-      Platform :: platform(),
-      Code :: binary(),
-      RedirectURI :: binary().
-auth(Platform, Code, RedirectURI) ->
-    Module = platform_to_module(Platform),
-    Module:auth(Code, RedirectURI).
-
-
--spec captcha(handler(), Captcha) -> handler() when % {{{1
-      Captcha :: any().
-captcha(#paypal{module=Module, user_id=Id, token=Token}=Handler, Captcha) ->
-    Module:captcha(Handler, Captcha).
-
--spec profile(handler()) -> profile(). % {{{1
-profile(#paypal{module=Module, user_id=Id, token=Token}=Handler) ->
-    Module:profile(Handler, Id).
-
--spec profile(handler(), paypal_id()) -> profile(). % {{{1
-profile(#paypal{module=Module, token=Token}=Handler, Id) ->
-    Module:profile(Handler, Id).
-
--spec profiles(handler(), [paypal_id()]) -> [profile()]. % {{{1
-profiles(#paypal{module=Module, token=Token}=Handler, IDs) ->
-    Module:profiles(Handler, IDs).
-
--spec playlists(handler()) -> [playlist()]. % {{{1
-playlists(#paypal{module=Module, token=Token, user_id=UID}=Handler) ->
-    Module:playlists(Handler, UID).
-
--spec playlists(handler(), [paypal_id()]) -> [playlist()]. % {{{1
-playlists(#paypal{module=Module, token=Token}=Handler, IDs) ->
-    Module:playlists(Handler, IDs).
-
--spec playlist(handler(), paypal_id()) -> playlist(). % {{{1
-playlist(#paypal{module=Module, token=Token}=Handler, Id) ->
-    Module:playlist(Handler, Id).
-
--spec track(handler(), paypal_id()) -> track(). % {{{1
-track(#paypal{module=Module, token=Token}=Handler, Id) ->
-    Module:track(Handler, Id).
-
--spec tracks(handler(), [paypal_id()]) -> [track()]. % {{{1
-tracks(#paypal{module=Module, token=Token}=Handler, Ids) ->
-    Module:tracks(Handler, Ids).
-
--spec user_tracks(handler(), paypal_id()) -> [track()]. % {{{1
-user_tracks(#paypal{module=Module, token=Token}=Handler, Id) ->
-    Module:user_tracks(Handler, Id).
-
--spec user_tracks(handler()) -> [track()]. % {{{1
-user_tracks(#paypal{module=Module, user_id=Id, token=Token}=Handler) ->
-    Module:user_tracks(Handler, Id).
-
-%%%===================================================================
-%%% gen_server callbacks
-%%%===================================================================
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc
-%% Initializes the server
-%%
-%% @spec init(Args) -> {ok, State} |
-%%                     {ok, State, Timeout} |
-%%                     ignore |
-%%                     {stop, Reason}
-%% @end
-%%--------------------------------------------------------------------
 init([]) -> % {{{1
     {ok, #state{}}.
 
@@ -213,6 +119,3 @@ code_change(_OldVsn, State, _Extra) -> % {{{1
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-platform_to_module(M) -> % {{{1
-    list_to_atom("paypal_" ++ atom_to_list(M)).
-

@@ -2,8 +2,12 @@
 
 -behaviour(gen_server).
 
+-include("include/paypal.hrl").
 %% API functions
--export([start_link/0]).
+-export([
+         start_link/1,
+         call/3
+        ]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -13,7 +17,15 @@
          terminate/2,
          code_change/3]).
 
--record(state, {}).
+-record(state, {
+          client_id = <<>> :: binary(),
+          secret = <<>> :: binary(),
+          token = <<>> :: binary(),
+          env = sandbox :: sandbox | live,
+          config = [] :: [proplists:property()]
+               }).
+-define(LIVE_URL, <<"https://api.paypal.com">>).
+-define(SANDBOX_URL, <<"https://api.sandbox.paypal.com">>).
 
 %%%===================================================================
 %%% API functions
@@ -26,9 +38,18 @@
 %% @spec start_link() -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link() ->  % {{{2
-    Workers = application:get_env(paypal, request_workers, 10),
-    hottub:start_link(request, Workers, gen_server, start_link, [?MODULE, [], []]).
+start_link(Config) -> % {{{1
+    gen_server:start_link({local, ?MODULE}, ?MODULE, [Config], []).
+
+
+-spec call(Method, Function, Args) -> Response when % {{{1
+      Method :: atom(),
+      Function :: iodata(),
+      Args :: map() | [proplists:property()],
+      Response :: map() | [proplists:property()].
+call(Method, Function, Args) -> 
+    maybe_auth({Method, Function, Args},
+      gen_server:call(?MODULE, {Method, Function, Args}, infinity)).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -45,8 +66,11 @@ start_link() ->  % {{{2
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([]) ->  % {{{2
-    {ok, #state{}}.
+init([Config]) -> % {{{1
+    AppID = proplists:get_value(client_id, Config, <<>>),
+    Secret = proplists:get_value(secret, Config, <<>>),
+    lager:info("Starting vk handler for ~p", [ AppID ]),
+    {ok, #state{client_id=AppID, config=Config, secret=Secret}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -62,7 +86,31 @@ init([]) ->  % {{{2
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call(_Request, _From, State) ->  % {{{2
+handle_call({auth}, _From, #state{client_id=AppID, secret=Secret}=State) -> % {{{1
+    URL = hackney_url:make_url(get_url_for_env(State), [<<"v1">>, <<"oauth2">>, <<"token">>], []),
+    Token = base64:encode(<<AppID/bytes, ":", Secret/bytes>>),
+    lager:debug("AppID: ~pToken: ~p", [AppID, Token]),
+    Headers = maps:to_list(
+                #{<<"Accept">> => "application/json", 
+                <<"Authorization">> => <<"Basic ", Token/bytes>>}),
+
+    Responce = hackney:request(post, URL, Headers, {form, [{"grant_type", "client_credentials"}]}, [{follow_rediret, true}]),
+     case decode_responce(Responce) of
+         #{<<"access_token">> := AccessToken} = Map ->
+             {reply, Map, State#state{token=AccessToken}};
+         Map ->
+             {reply, Map, State}
+     end;
+handle_call({Method, Function, Args}, _From, #state{token=Token}=State) -> % {{{1
+    Headers = maps:to_list(
+                #{<<"Content-Type">> => "application/json", 
+                <<"Authorization">> => <<"Bearer ", Token/bytes>>}),
+
+    {URL, Body} = request_data(Method, Function, Args, State),
+    Responce = hackney:request(Method, URL, Headers, Body, [{follow_rediret, true}]),
+    Map = decode_responce(Responce),
+    {reply, Map, State};
+handle_call(_Request, _From, State) -> % {{{1
     Reply = ok,
     {reply, Reply, State}.
 
@@ -76,15 +124,7 @@ handle_call(_Request, _From, State) ->  % {{{2
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast({From, URL}, State) ->  % {{{2
-    handle_cast({From, get, URL, [], []}, State);
-handle_cast({From, Method, URL, Headers, Body}, State) ->  % {{{2
-    lager:debug("Requesting URL: ~p from pid: ~p", [URL, From]),
-    Responce = hackney:request(Method, URL, Headers, Body, [{follow_rediret, true}]),
-    Map = decode_responce(Responce),
-    gen_server:reply(From, Map),
-    {noreply, State};
-handle_cast(_Msg, State) ->  % {{{2
+handle_cast(_Msg, State) -> % {{{1
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -97,7 +137,7 @@ handle_cast(_Msg, State) ->  % {{{2
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info(_Info, State) ->  % {{{2
+handle_info(_Info, State) -> % {{{1
     {noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -111,7 +151,7 @@ handle_info(_Info, State) ->  % {{{2
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->  % {{{2
+terminate(_Reason, _State) -> % {{{1
     ok.
 
 %%--------------------------------------------------------------------
@@ -122,22 +162,22 @@ terminate(_Reason, _State) ->  % {{{2
 %% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
 %% @end
 %%--------------------------------------------------------------------
-code_change(_OldVsn, State, _Extra) ->  % {{{2
+code_change(_OldVsn, State, _Extra) -> % {{{1
     {ok, State}.
 
 %%%===================================================================
-%%% Internal functions  % {{{1
+%%% Internal functions
 %%%===================================================================
 decode_responce({ok, 200, _, Ref}) ->  % {{{2
     Body = hackney:body(Ref),
     decode_body(Body);
 decode_responce({ok, 401, _, Ref}) ->  % {{{2
-    lager:warning("Authorization required"),
+    lager:warning("Authorization required: ~p", [hackney:body(Ref)]),
     unauthorized;
 decode_responce({ok, Code, _, Ref}) ->  % {{{2
     Body = hackney:body(Ref),
     lager:warning("Request returned wrong code: ~p ~p", [Code, Body]),
-    #{};
+    decode_body(Body);
 decode_responce({error, Reason}) ->  % {{{2
     lager:warning("Request error: ~p", [Reason]),
     #{}.
@@ -153,3 +193,27 @@ decode_body({ok, Body}) ->  % {{{2
 decode_body({error, Reason}) ->  % {{{2
     lager:warning("Body decode error: ~p", [Reason]),
     #{}.
+parse_response(#{<<"response">> := [N | Data]}) when is_integer(N) ->  % {{{1
+    {ok, Data};
+parse_response(#{<<"response">> := Data}) ->  % {{{1
+    {ok, Data};
+parse_response(#{<<"error">> := Err}) ->  % {{{1
+    lager:warning("VK error: ~p", [Err]),
+    {error, Err}.
+
+get_url_for_env(#state{env=sandbox}) -> % {{{1
+    ?SANDBOX_URL;
+get_url_for_env(#state{env=live}) -> % {{{1
+    ?LIVE_URL.
+
+maybe_auth(Request, unauthorized) -> % {{{1
+      lager:debug("Auth: ~p", [gen_server:call(?MODULE, {auth}, infinity)]),
+      gen_server:call(?MODULE, Request, infinity);
+maybe_auth(_Request, Response) -> % {{{1
+    Response.
+
+request_data(get, Function, Args, State) -> % {{{1
+    {hackney_url:make_url(get_url_for_env(State), [<<"v1">>, Function], Args), []};
+request_data(_, Function, Args, State) -> % {{{1
+    {hackney_url:make_url(get_url_for_env(State), [<<"v1">>, Function], []), Args}.
+
